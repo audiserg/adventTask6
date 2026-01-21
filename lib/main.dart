@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Детектор эмоций',
+      title: 'Лучший диалог с LLM',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
@@ -50,7 +50,7 @@ class ChatScreen extends StatelessWidget {
       appBar: AppBar(
         title: BlocBuilder<ChatBloc, ChatState>(
           builder: (context, state) {
-            String title = 'Детектор эмоций';
+            String title = 'Лучший диалог с LLM';
             if (state is ChatLoaded && state.currentTopic != null) {
               title = state.currentTopic!;
             } else if (state is ChatLoading && state.currentTopic != null) {
@@ -61,6 +61,26 @@ class ChatScreen extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
+          // Иконка настройки температуры
+          BlocBuilder<ChatBloc, ChatState>(
+            builder: (context, state) {
+              return IconButton(
+                icon: const Icon(Icons.thermostat),
+                tooltip: 'Настройка температуры',
+                onPressed: () => _showTemperatureDialog(context, state.temperature),
+              );
+            },
+          ),
+          // Иконка настройки системного промпта
+          BlocBuilder<ChatBloc, ChatState>(
+            builder: (context, state) {
+              return IconButton(
+                icon: const Icon(Icons.settings_applications),
+                tooltip: 'Настройка системного промпта',
+                onPressed: () => _showSystemPromptDialog(context, state.systemPrompt),
+              );
+            },
+          ),
           BlocBuilder<ChatBloc, ChatState>(
             builder: (context, state) {
               final hasMessages = state is ChatLoaded ||
@@ -174,6 +194,121 @@ class ChatScreen extends StatelessWidget {
           const ChatInputWidget(),
         ],
       ),
+    );
+  }
+
+  static void _showTemperatureDialog(BuildContext context, double currentTemperature) {
+    final controller = TextEditingController(text: currentTemperature.toString());
+    // Получаем ChatBloc из правильного контекста до создания диалога
+    final chatBloc = context.read<ChatBloc>();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Настройка температуры'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Температура (0.0 - 2.0)',
+                  hintText: '0.7',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Температура контролирует случайность ответов:\n'
+                '• 0.0 - более детерминированные ответы\n'
+                '• 0.7 - баланс (рекомендуется)\n'
+                '• 2.0 - более креативные ответы',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final value = double.tryParse(controller.text);
+                if (value != null && value >= 0.0 && value <= 2.0) {
+                  chatBloc.add(UpdateTemperature(value));
+                  Navigator.of(dialogContext).pop();
+                  // Показываем подтверждение - используем оригинальный контекст
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Температура сохранена: ${value.toStringAsFixed(1)}'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Введите значение от 0.0 до 2.0'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  static void _showSystemPromptDialog(BuildContext context, String currentSystemPrompt) {
+    final controller = TextEditingController(text: currentSystemPrompt);
+    // Получаем ChatBloc из правильного контекста до создания диалога
+    final chatBloc = context.read<ChatBloc>();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Настройка системного промпта'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Системный промпт',
+                hintText: 'Оставьте пустым для использования по умолчанию',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 10,
+              minLines: 5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                chatBloc.add(UpdateSystemPrompt(controller.text));
+                Navigator.of(dialogContext).pop();
+                // Показываем подтверждение - используем оригинальный контекст
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(controller.text.isEmpty 
+                        ? 'Системный промпт сброшен (будет использован по умолчанию)'
+                        : 'Системный промпт сохранен'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

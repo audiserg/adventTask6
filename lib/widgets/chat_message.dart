@@ -167,14 +167,45 @@ class ChatMessageWidget extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            _formatTime(message.timestamp),
-                            style: TextStyle(
-                              color: message.isUser
-                                  ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
-                                  : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                              fontSize: 11,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatTime(message.timestamp),
+                                style: TextStyle(
+                                  color: message.isUser
+                                      ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
+                                      : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              // Температура для AI сообщений
+                              if (isAiMessage && message.temperature != null) ...[
+                                const SizedBox(width: 8),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.thermostat,
+                                      size: 12,
+                                      color: message.isUser
+                                          ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
+                                          : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      message.temperature!.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        color: message.isUser
+                                            ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
+                                            : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
                           ),
                           // Иконка info для AI сообщений
                           if (isAiMessage)

@@ -7,6 +7,7 @@ class Message {
   final String? topic;
   final String? body;
   final Emotion? emotion;
+  final double? temperature;
 
   Message({
     required this.text,
@@ -15,6 +16,7 @@ class Message {
     this.topic,
     this.body,
     this.emotion,
+    this.temperature,
   }) : timestamp = timestamp ?? DateTime.now();
 
   Message copyWith({
@@ -24,6 +26,7 @@ class Message {
     String? topic,
     String? body,
     Emotion? emotion,
+    double? temperature,
   }) {
     return Message(
       text: text ?? this.text,
@@ -32,11 +35,12 @@ class Message {
       topic: topic ?? this.topic,
       body: body ?? this.body,
       emotion: emotion ?? this.emotion,
+      temperature: temperature ?? this.temperature,
     );
   }
 
   @override
-  String toString() => 'Message(text: $text, isUser: $isUser, timestamp: $timestamp, topic: $topic, emotion: $emotion)';
+  String toString() => 'Message(text: $text, isUser: $isUser, timestamp: $timestamp, topic: $topic, emotion: $emotion, temperature: $temperature)';
 
   @override
   bool operator ==(Object other) {
@@ -48,9 +52,10 @@ class Message {
         other.timestamp == timestamp &&
         other.topic == topic &&
         other.body == body &&
-        other.emotion == emotion;
+        other.emotion == emotion &&
+        other.temperature == temperature;
   }
 
   @override
-  int get hashCode => text.hashCode ^ isUser.hashCode ^ timestamp.hashCode ^ topic.hashCode ^ body.hashCode ^ emotion.hashCode;
+  int get hashCode => text.hashCode ^ isUser.hashCode ^ timestamp.hashCode ^ topic.hashCode ^ body.hashCode ^ emotion.hashCode ^ temperature.hashCode;
 }

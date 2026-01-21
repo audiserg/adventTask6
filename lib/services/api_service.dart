@@ -6,7 +6,11 @@ class ApiService {
   // В production замените на URL вашего сервера
   static const String baseUrl = 'http://localhost:3000';
 
-  Future<String> sendMessage(List<Message> messages) async {
+  Future<String> sendMessage(
+    List<Message> messages, {
+    double? temperature,
+    String? systemPrompt,
+  }) async {
     try {
       // Преобразуем сообщения в формат для API
       final messagesJson = messages
@@ -18,11 +22,23 @@ class ApiService {
           )
           .toList();
 
+      final requestBody = <String, dynamic>{
+        'messages': messagesJson,
+      };
+      
+      if (temperature != null) {
+        requestBody['temperature'] = temperature;
+      }
+      
+      if (systemPrompt != null && systemPrompt.isNotEmpty) {
+        requestBody['systemPrompt'] = systemPrompt;
+      }
+
       final response = await http
           .post(
             Uri.parse('$baseUrl/api/chat'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'messages': messagesJson}),
+            body: jsonEncode(requestBody),
           )
           .timeout(
             const Duration(seconds: 60),

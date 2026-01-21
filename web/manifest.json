@@ -1,11 +1,11 @@
 {
-    "name": "Детектор эмоций",
-    "short_name": "Детектор",
+    "name": "Лучший диалог с LLM",
+    "short_name": "Диалог LLM",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Детектор эмоций",
+    "description": "Лучший диалог с LLM",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

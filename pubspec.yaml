@@ -1,5 +1,5 @@
 name: advent_task1
-description: "Детектор эмоций"
+description: "Лучший диалог с LLM"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,6 +38,7 @@ dependencies:
   flutter_bloc: ^8.1.6
   equatable: ^2.0.5
   flutter_markdown: ^0.6.18
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

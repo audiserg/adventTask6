@@ -19,3 +19,25 @@ class SendMessage extends ChatEvent {
 class ClearChat extends ChatEvent {
   const ClearChat();
 }
+
+class UpdateTemperature extends ChatEvent {
+  final double temperature;
+
+  const UpdateTemperature(this.temperature);
+
+  @override
+  List<Object?> get props => [temperature];
+}
+
+class UpdateSystemPrompt extends ChatEvent {
+  final String systemPrompt;
+
+  const UpdateSystemPrompt(this.systemPrompt);
+
+  @override
+  List<Object?> get props => [systemPrompt];
+}
+
+class LoadSettings extends ChatEvent {
+  const LoadSettings();
+}

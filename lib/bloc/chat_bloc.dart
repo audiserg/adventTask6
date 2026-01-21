@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
+import '../services/settings_service.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
@@ -12,6 +13,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         super(const ChatInitial()) {
     on<SendMessage>(_onSendMessage);
     on<ClearChat>(_onClearChat);
+    on<UpdateTemperature>(_onUpdateTemperature);
+    on<UpdateSystemPrompt>(_onUpdateSystemPrompt);
+    on<LoadSettings>(_onLoadSettings);
+    
+    // Загружаем настройки при инициализации
+    _initializeSettings();
+  }
+
+  Future<void> _initializeSettings() async {
+    // Небольшая задержка для инициализации SharedPreferences на веб-платформе
+    await Future.delayed(const Duration(milliseconds: 100));
+    add(const LoadSettings());
   }
 
   // Парсинг ответа в формате topic:<Тема>: body:<Ответ>: emotion:<Цвет>:
@@ -185,12 +198,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
     final updatedMessages = [...currentMessages, userMessage];
 
+    // Получаем текущие настройки
+    final currentTemperature = state.temperature;
+    final currentSystemPrompt = state.systemPrompt;
+    
     // Переходим в состояние загрузки
-    emit(ChatLoading(updatedMessages, currentTopic: currentTopic));
+    emit(ChatLoading(
+      updatedMessages,
+      currentTopic: currentTopic,
+      temperature: currentTemperature,
+      systemPrompt: currentSystemPrompt,
+    ));
 
     try {
+      // Получаем текущие настройки температуры и системного промпта
+      final currentTemperature = state.temperature;
+      final currentSystemPrompt = state.systemPrompt;
+      
       // Отправляем запрос к API
-      final response = await _apiService.sendMessage(updatedMessages);
+      final response = await _apiService.sendMessage(
+        updatedMessages,
+        temperature: currentTemperature,
+        systemPrompt: currentSystemPrompt.isNotEmpty ? currentSystemPrompt : null,
+      );
 
       // Парсим ответ
       final parsed = _parseResponse(response);
@@ -228,6 +258,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         topic: topic,
         body: body,
         emotion: emotion,
+        temperature: currentTemperature,
       );
       
       print('=== MESSAGE CREATION DEBUG ===');
@@ -241,7 +272,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final finalMessages = [...updatedMessages, aiMessage];
 
       // Переходим в состояние загружено с темой
-      emit(ChatLoaded(finalMessages, currentTopic: topic));
+      emit(ChatLoaded(
+        finalMessages,
+        currentTopic: topic,
+        temperature: currentTemperature,
+        systemPrompt: currentSystemPrompt,
+      ));
     } catch (e) {
       // Переходим в состояние ошибки
       String errorMessage = e.toString();
@@ -263,7 +299,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       } else if (errorMessage.contains('500') || errorMessage.contains('Server configuration')) {
         errorMessage = 'Ошибка сервера. Проверьте настройку API ключа в .env файле.';
       }
-      emit(ChatError(updatedMessages, errorMessage));
+      emit(ChatError(
+        updatedMessages,
+        errorMessage,
+        temperature: currentTemperature,
+        systemPrompt: currentSystemPrompt,
+      ));
     }
   }
 
@@ -271,7 +312,132 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ClearChat event,
     Emitter<ChatState> emit,
   ) {
-    emit(const ChatInitial());
+    emit(ChatInitial(
+      temperature: state.temperature,
+      systemPrompt: state.systemPrompt,
+    ));
+  }
+
+  void _onUpdateTemperature(
+    UpdateTemperature event,
+    Emitter<ChatState> emit,
+  ) async {
+    print('ChatBloc: Обновление температуры на ${event.temperature}');
+    // Сохраняем настройку
+    final saved = await SettingsService.saveTemperature(event.temperature);
+    print('ChatBloc: Температура сохранена: $saved');
+    
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      emit(ChatLoaded(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: event.temperature,
+        systemPrompt: currentState.systemPrompt,
+      ));
+    } else if (state is ChatLoading) {
+      final currentState = state as ChatLoading;
+      emit(ChatLoading(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: event.temperature,
+        systemPrompt: currentState.systemPrompt,
+      ));
+    } else if (state is ChatError) {
+      final currentState = state as ChatError;
+      emit(ChatError(
+        currentState.messages,
+        currentState.error,
+        temperature: event.temperature,
+        systemPrompt: currentState.systemPrompt,
+      ));
+    } else {
+      emit(ChatInitial(
+        temperature: event.temperature,
+        systemPrompt: state.systemPrompt,
+      ));
+    }
+  }
+
+  void _onUpdateSystemPrompt(
+    UpdateSystemPrompt event,
+    Emitter<ChatState> emit,
+  ) async {
+    print('ChatBloc: Обновление системного промпта (длина: ${event.systemPrompt.length})');
+    // Сохраняем настройку
+    final saved = await SettingsService.saveSystemPrompt(event.systemPrompt);
+    print('ChatBloc: Системный промпт сохранен: $saved');
+    
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      emit(ChatLoaded(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: currentState.temperature,
+        systemPrompt: event.systemPrompt,
+      ));
+    } else if (state is ChatLoading) {
+      final currentState = state as ChatLoading;
+      emit(ChatLoading(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: currentState.temperature,
+        systemPrompt: event.systemPrompt,
+      ));
+    } else if (state is ChatError) {
+      final currentState = state as ChatError;
+      emit(ChatError(
+        currentState.messages,
+        currentState.error,
+        temperature: currentState.temperature,
+        systemPrompt: event.systemPrompt,
+      ));
+    } else {
+      emit(ChatInitial(
+        temperature: state.temperature,
+        systemPrompt: event.systemPrompt,
+      ));
+    }
+  }
+
+  void _onLoadSettings(
+    LoadSettings event,
+    Emitter<ChatState> emit,
+  ) async {
+    final settings = await SettingsService.loadAllSettings();
+    final temperature = settings['temperature'] as double;
+    final systemPrompt = settings['systemPrompt'] as String;
+    
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      emit(ChatLoaded(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: temperature,
+        systemPrompt: systemPrompt,
+      ));
+    } else if (state is ChatLoading) {
+      final currentState = state as ChatLoading;
+      emit(ChatLoading(
+        currentState.messages,
+        currentTopic: currentState.currentTopic,
+        temperature: temperature,
+        systemPrompt: systemPrompt,
+      ));
+    } else if (state is ChatError) {
+      final currentState = state as ChatError;
+      emit(ChatError(
+        currentState.messages,
+        currentState.error,
+        temperature: temperature,
+        systemPrompt: systemPrompt,
+      ));
+    } else {
+      emit(ChatInitial(
+        temperature: temperature,
+        systemPrompt: systemPrompt,
+      ));
+    }
   }
 
   // Получить текущую тему из состояния
